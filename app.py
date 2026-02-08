@@ -14,35 +14,31 @@ from pydub import AudioSegment
 import io
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="Ultimate English Master", page_icon="🏛️", layout="wide")
+st.set_page_config(page_title="Easy English AI", page_icon="🧸", layout="wide")
 
-# --- 1. THE CEFR ROADMAP (Your Syllabus) ---
+# --- 1. SIMPLE ROADMAP (Clear & Easy) ---
 CURRICULUM = {
-    "Phase 1: Foundation (A1/A2)": [
-        "1. Basic Greetings & Numbers",
-        "2. To Be (Am, Is, Are)",
-        "3. Present Simple (Habits)",
-        "4. Present Continuous (Now)",
-        "5. Past Simple (Finished Actions)"
+    "Level 1: The Basics (Baby Steps)": [
+        "1. Hello & Introduction (Start Here)",
+        "2. Action Words (Eat, Sleep, Go)",
+        "3. Describing Things (Colors, Big/Small)",
+        "4. Daily Routine (I wake up...)",
     ],
-    "Phase 2: Connections (B1/B2)": [
-        "6. Present Perfect (Experiences)",
-        "7. Future Forms (Will vs Going to)",
-        "8. Modals (Can, Should, Must)",
-        "9. Conditionals 0, 1 & 2",
-        "10. Passive Voice"
+    "Level 2: Connecting Ideas (Sentences)": [
+        "5. Yesterday (Past Tense)",
+        "6. Tomorrow (Future Plans)",
+        "7. Asking Questions (Who, What, Where)",
+        "8. Can & Cannot (Ability)",
     ],
-    "Phase 3: The Polish (C1/C2)": [
-        "11. Advanced Phrasal Verbs",
-        "12. Conditionals 3 & Mixed",
-        "13. Reported Speech",
-        "14. Inversion for Emphasis",
-        "15. Business & Academic Writing"
+    "Level 3: Fluent Speaking (Conversation)": [
+        "9. Talking about Feelings",
+        "10. Shopping & Bargaining",
+        "11. Travel & Directions",
+        "12. Office & Job Interview",
     ]
 }
 
-# --- 2. VERB DATABASE (The 1000+ Verb Vault) ---
-# We preload top 50 common verbs. In a real app, we would import a CSV of 1000.
+# --- 2. VERB DATABASE (Pre-loaded with 50 Common Verbs) ---
 INITIAL_VERBS = [
     ("be", "was/were", "been"), ("have", "had", "had"), ("do", "did", "done"),
     ("say", "said", "said"), ("go", "went", "gone"), ("get", "got", "gotten"),
@@ -64,14 +60,11 @@ INITIAL_VERBS = [
 ]
 
 def init_db():
-    conn = sqlite3.connect("english_master.db")
+    conn = sqlite3.connect("english_easy.db")
     c = conn.cursor()
-    # Student Progress Table
-    c.execute("CREATE TABLE IF NOT EXISTS progress (name TEXT, level TEXT, xp INTEGER)")
-    # Verb Table
     c.execute("CREATE TABLE IF NOT EXISTS verbs (v1 TEXT UNIQUE, v2 TEXT, v3 TEXT)")
     
-    # Populate Verbs if empty
+    # Load verbs if empty
     c.execute("SELECT count(*) FROM verbs")
     if c.fetchone()[0] == 0:
         c.executemany("INSERT OR IGNORE INTO verbs VALUES (?, ?, ?)", INITIAL_VERBS)
@@ -79,21 +72,25 @@ def init_db():
     conn.close()
 
 def get_verbs():
-    conn = sqlite3.connect("english_master.db")
+    conn = sqlite3.connect("english_easy.db")
     c = conn.cursor()
     c.execute("SELECT * FROM verbs")
     data = c.fetchall()
     conn.close()
     return data
 
-# --- AI ENGINE ---
+# --- AI ENGINE (UPDATED TO BE SIMPLE) ---
 @st.cache_data(show_spinner=False)
 def get_groq_response(prompt, api_key):
     try:
         client = Groq(api_key=api_key)
         chat_completion = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "You are an Expert English Professor (CEFR C2 Certified)."},
+                {
+                    "role": "system", 
+                    # --- THIS IS THE MAGIC CHANGE ---
+                    "content": "You are a friendly, patient English Tutor for beginners. Explain everything in VERY SIMPLE words. Use real-life analogies (like cooking, driving, sports). Do not use complex grammar terms. Explain like I am 10 years old. Always support explanations with Hindi/Hinglish examples if helpful."
+                },
                 {"role": "user", "content": prompt}
             ],
             model="llama-3.3-70b-versatile",
@@ -104,7 +101,7 @@ def get_groq_response(prompt, api_key):
         return f"ERROR: {e}"
 
 def generate_safe(api_key, prompt):
-    with st.spinner("🧠 Thinking..."):
+    with st.spinner("🧸 Simplifying the topic..."):
         text = get_groq_response(prompt, api_key)
     return text
 
@@ -123,14 +120,14 @@ async def generate_human_voice(text):
     text = re.sub(r'\[.*?\]', '', text).replace("*", "").replace("#", "")
     if not text.strip(): return
     communicate = edge_tts.Communicate(text, "en-IN-NeerjaNeural")
-    await communicate.save("master_voice.mp3")
+    await communicate.save("easy_voice.mp3")
 
 def speak_human(text):
     try:
         avatar_spot = show_avatar(is_speaking=True)
         asyncio.run(generate_human_voice(text))
-        if os.path.exists("master_voice.mp3"):
-            with open("master_voice.mp3", "rb") as f:
+        if os.path.exists("easy_voice.mp3"):
+            with open("easy_voice.mp3", "rb") as f:
                 audio_bytes = f.read()
             st.audio(audio_bytes, format="audio/mp3", autoplay=True)
             est_time = len(text.split()) / 2.5
@@ -158,13 +155,13 @@ def process_audio(audio_bytes):
 init_db()
 
 with st.sidebar:
-    st.title("🏛️ English Master")
+    st.title("🧸 Easy English")
     name = st.text_input("Name:")
     try: api_key = st.secrets["GROQ_API_KEY"]
     except: api_key = st.text_input("Groq Key:", type="password")
     
     # NAVIGATION
-    mode = st.radio("Select Mode:", ["🗺️ Roadmap Learning", "🏋️ Verb Drill (1000+)", "💬 AI Roleplay"])
+    mode = st.radio("Choose Activity:", ["🗺️ Learn Simply", "🏋️ Verb Practice", "💬 Talk to AI"])
     
     st.divider()
     st.write("🎙️ **Microphone**")
@@ -174,20 +171,24 @@ with st.sidebar:
 if "voice_input" not in st.session_state: st.session_state.voice_input = None
 
 if api_key and name:
-    st.title(f"Welcome, {name}!")
+    st.title(f"Hi {name}! Let's Learn.")
     show_avatar(is_speaking=False)
 
-    # --- MODE 1: ROADMAP LEARNING ---
-    if mode == "🗺️ Roadmap Learning":
-        st.header("🗺️ Your Path to Fluency")
+    # --- MODE 1: SIMPLE LEARNING ---
+    if mode == "🗺️ Learn Simply":
+        st.header("🗺️ Simple Roadmap")
         
-        phase = st.selectbox("Select Phase:", list(CURRICULUM.keys()))
+        phase = st.selectbox("Select Level:", list(CURRICULUM.keys()))
         topic = st.selectbox("Select Topic:", CURRICULUM[phase])
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("Teach This Topic 📖"):
-                prompt = f"Explain '{topic}' for an ESL student. Return JSON: {{'lesson': 'markdown explanation', 'summary': 'short audio summary'}}"
+            if st.button("Explain Simply 📖"):
+                prompt = f"""
+                Explain '{topic}' to a complete beginner. 
+                Do NOT use grammar jargon. Use real life examples.
+                Return JSON: {{'lesson': 'Simple markdown text', 'summary': 'Very short audio summary (2 sentences)'}}
+                """
                 res = generate_safe(api_key, prompt)
                 try:
                     data = json.loads(res[res.find('{'):res.rfind('}')+1])
@@ -196,8 +197,8 @@ if api_key and name:
                 except: st.error("AI Error")
         
         with col2:
-            if st.button("Generate Quiz 📝"):
-                prompt = f"Create a quiz for '{topic}'. Return JSON: {{'question': 'text', 'options': ['A','B','C'], 'answer': 'A'}}"
+            if st.button("Give me a Simple Quiz 📝"):
+                prompt = f"Create a very easy quiz for '{topic}'. Return JSON: {{'question': 'text', 'options': ['A','B','C'], 'answer': 'A'}}"
                 res = generate_safe(api_key, prompt)
                 try:
                     st.session_state.quiz = json.loads(res[res.find('{'):res.rfind('}')+1])
@@ -207,63 +208,59 @@ if api_key and name:
             q = st.session_state.quiz
             st.info(f"**Quiz:** {q['question']}")
             ans = st.radio("Select:", q['options'])
-            if st.button("Submit Answer"):
+            if st.button("Check Answer"):
                 if ans.startswith(q['answer']):
-                    st.success("Correct!")
+                    st.success("Correct! 🎉")
                     st.balloons()
                     del st.session_state.quiz
                     st.rerun()
-                else: st.error("Try again.")
+                else: st.error("Oops! Try again.")
 
-    # --- MODE 2: VERB DRILL (THE VAULT) ---
-    elif mode == "🏋️ Verb Drill (1000+)":
-        st.header("🏋️ The Verb Vault")
+    # --- MODE 2: VERB PRACTICE ---
+    elif mode == "🏋️ Verb Practice":
+        st.header("🏋️ Verbs (Action Words)")
         
-        # 1. Search Tool
         st.subheader("📖 Dictionary")
-        search = st.text_input("Search for a verb (e.g., 'go'):")
+        search = st.text_input("Type a verb (like 'go' or 'eat'):")
         all_verbs = get_verbs()
         
         if search:
             found = [v for v in all_verbs if search.lower() in v[0]]
             if found:
                 for v in found:
-                    st.success(f"**{v[0].upper()}** -> Past: *{v[1]}* | Participle: *{v[2]}*")
+                    st.success(f"**{v[0].upper()}** (Present) -> **{v[1]}** (Past) -> **{v[2]}** (Perfect)")
             else:
-                st.warning("Verb not found in database.")
+                st.warning("I don't know that verb yet.")
 
         st.divider()
-        
-        # 2. Random Drill
-        st.subheader("🔥 Quick Fire Drill")
+        st.subheader("🔥 Quick Practice")
         if "drill_verb" not in st.session_state:
             st.session_state.drill_verb = random.choice(all_verbs)
         
         target = st.session_state.drill_verb
-        st.write(f"### What is the **Past Tense (V2)** of: `{target[0].upper()}`?")
+        st.write(f"### What is the **Past Tense** of: `{target[0].upper()}`?")
         
         user_v2 = st.text_input("Type Answer:", key="v2_input")
         
-        if st.button("Check Verb"):
-            # Check if answer matches V2 (handling multiple forms like 'was/were')
+        if st.button("Check"):
             if user_v2.lower().strip() in target[1].lower():
-                st.success(f"Correct! {target[0]} -> {target[1]}")
+                st.success(f"Yes! {target[0]} -> {target[1]}")
                 st.session_state.drill_verb = random.choice(all_verbs)
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error(f"Wrong. It is **{target[1]}**.")
+                st.error(f"Not quite. It is **{target[1]}**.")
                 speak_human(f"The past tense of {target[0]} is {target[1]}")
 
-    # --- MODE 3: AI ROLEPLAY ---
-    elif mode == "💬 AI Roleplay":
-        st.header("💬 Conversation Practice")
+    # --- MODE 3: SIMPLE CHAT ---
+    elif mode == "💬 Talk to AI":
+        st.header("💬 Easy Conversation")
         if "chat" not in st.session_state: st.session_state.chat = []
         
         for msg in st.session_state.chat:
             st.chat_message(msg["role"]).write(msg["text"])
             
-        user_input = st.chat_input("Type message...")
+        user_input = st.chat_input("Say something...")
         if st.session_state.voice_input: 
             user_input = st.session_state.voice_input
             st.session_state.voice_input = None
@@ -272,7 +269,7 @@ if api_key and name:
             st.session_state.chat.append({"role": "user", "text": user_input})
             st.chat_message("user").write(user_input)
             
-            prompt = f"Reply to this English student: '{user_input}'. Correct any grammar mistakes politely."
+            prompt = f"Reply to this beginner student: '{user_input}'. Use very simple English words. Correct any mistakes gently."
             res = generate_safe(api_key, prompt)
             
             st.session_state.chat.append({"role": "assistant", "text": res})
@@ -281,4 +278,4 @@ if api_key and name:
             st.rerun()
 
 else:
-    st.info("Please Login to access the Ultimate Course.")
+    st.info("Please Login to start learning.")
