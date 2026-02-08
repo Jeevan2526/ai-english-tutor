@@ -4,3 +4,5 @@ edge-tts
 SpeechRecognition
 streamlit-mic-recorder
 pydub
+pandas
+bcrypt
