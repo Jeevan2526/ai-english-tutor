@@ -8,7 +8,9 @@ import re
 import os
 import time
 import json
-from streamlit_mic_recorder import mic_recorder # <--- NEW IMPORT
+import io
+from streamlit_mic_recorder import mic_recorder
+from pydub import AudioSegment # <--- NEW LIBRARY
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="AI Human Tutor", page_icon="⚡", layout="wide")
@@ -30,23 +32,17 @@ def update_xp(name, amount):
     conn.commit()
     conn.close()
 
-# --- AI ENGINE (GROQ) ---
+# --- AI ENGINE ---
 @st.cache_data(show_spinner=False)
 def get_groq_response(prompt, api_key):
     try:
         client = Groq(api_key=api_key)
         chat_completion = client.chat.completions.create(
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful English Tutor. Always return JSON when asked."
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
+                {"role": "system", "content": "You are a helpful English Tutor. Always return JSON when asked."},
+                {"role": "user", "content": prompt}
             ],
-            model="llama-3.3-70b-versatile", 
+            model="llama-3.3-70b-versatile",
             temperature=0.7,
         )
         return chat_completion.choices[0].message.content
@@ -81,8 +77,8 @@ def speak_human(text):
         avatar_spot = show_avatar(is_speaking=True)
         asyncio.run(generate_human_voice(text))
         if os.path.exists("speech_groq.mp3"):
-            audio_file = open("speech_groq.mp3", "rb")
-            audio_bytes = audio_file.read()
+            with open("speech_groq.mp3", "rb") as f:
+                audio_bytes = f.read()
             st.audio(audio_bytes, format="audio/mp3", autoplay=True)
             est_time = len(text.split()) / 2.5
             time.sleep(est_time)
@@ -90,25 +86,28 @@ def speak_human(text):
     except Exception as e:
         st.error(f"Audio Error: {e}")
 
-# --- NEW FUNCTION: BROWSER RECORDER ---
+# --- UPDATED AUDIO PROCESSOR (THE FIX) ---
 def process_audio(audio_bytes):
-    """Converts the browser audio to text"""
+    """Converts WebM audio to WAV using FFmpeg + Pydub"""
     if audio_bytes:
-        # Save the bytes to a temporary file
-        with open("temp_audio.wav", "wb") as f:
-            f.write(audio_bytes)
-        
-        # Use SpeechRecognition on the FILE, not the microphone
-        r = sr.Recognizer()
-        with sr.AudioFile("temp_audio.wav") as source:
-            audio_data = r.record(source)
-            try:
+        try:
+            # 1. Load the raw bytes (likely WebM from browser)
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+            
+            # 2. Export to a WAV buffer
+            wav_io = io.BytesIO()
+            audio.export(wav_io, format="wav")
+            wav_io.seek(0) # Go back to start of file
+            
+            # 3. Use SpeechRecognition on the WAV data
+            r = sr.Recognizer()
+            with sr.AudioFile(wav_io) as source:
+                audio_data = r.record(source)
                 text = r.recognize_google(audio_data)
                 return text
-            except sr.UnknownValueError:
-                return None
-            except sr.RequestError:
-                return None
+        except Exception as e:
+            st.warning(f"Could not understand audio: {e}")
+            return None
     return None
 
 # --- APP START ---
@@ -117,25 +116,15 @@ init_db()
 with st.sidebar:
     st.title("⚡ AI Tutor (Groq)")
     name = st.text_input("Name:")
-    
     try: api_key = st.secrets["GROQ_API_KEY"]
-    except: api_key = st.text_input("Groq API Key (gsk_...):", type="password")
-    
+    except: api_key = st.text_input("Groq Key:", type="password")
     mode = st.radio("Mode:", ["📚 Grammar", "📝 Quiz", "💬 Roleplay"])
     
     st.markdown("---")
     st.write("🎙️ **Voice Input**")
-    
-    # --- NEW RECORDER WIDGET ---
-    # This creates a button: Click to Record -> Click to Stop
-    audio = mic_recorder(
-        start_prompt="🎤 Start Recording",
-        stop_prompt="Dn Stop Recording",
-        key='recorder'
-    )
+    audio = mic_recorder(start_prompt="🎤 Record", stop_prompt="Dn Stop", key='recorder')
     
     if audio:
-        # If we have audio, process it immediately
         st.session_state.voice_input = process_audio(audio['bytes'])
 
     if st.button("🔄 Clear Memory"):
@@ -144,43 +133,31 @@ with st.sidebar:
 if "voice_input" not in st.session_state: st.session_state.voice_input = None
 
 if api_key and name:
-
     st.title("🚀 AI English Academy")
     show_avatar(is_speaking=False)
 
-    # --- MODE 1: GRAMMAR ---
+    # --- GRAMMAR ---
     if mode == "📚 Grammar":
         st.header("📚 Grammar Class")
-        
         with st.form("grammar_form"):
-            topic = st.text_input("Enter Topic:", "Present Tense")
+            topic = st.text_input("Topic:", "Present Tense")
             submitted = st.form_submit_button("Teach Me 👩‍🏫")
-        
         if submitted:
-            prompt = f"""
-            Teach '{topic}'. Return ONLY valid JSON with no extra text:
-            {{ "lesson": "Markdown explanation with Hindi examples.", "summary": "Short speech text." }}
-            """
+            prompt = f"Teach '{topic}'. Return JSON: {{'lesson': 'markdown', 'summary': 'speech'}}"
             res_text = generate_safe(api_key, prompt)
             try:
                 json_start = res_text.find('{')
                 json_end = res_text.rfind('}') + 1
-                if json_start != -1:
-                    data = json.loads(res_text[json_start:json_end])
-                    st.markdown(data["lesson"])
-                    speak_human(data["summary"])
-            except:
-                st.error("AI Error. Try again.")
+                data = json.loads(res_text[json_start:json_end])
+                st.markdown(data["lesson"])
+                speak_human(data["summary"])
+            except: st.error("AI Error")
 
-    # --- MODE 2: QUIZ ---
+    # --- QUIZ ---
     elif mode == "📝 Quiz":
         st.header("📝 Voice Quiz")
-        
         if st.button("New Question 🎲"):
-            prompt = """
-            Generate 1 grammar question. Return ONLY valid JSON:
-            { "question": "Q text", "options": ["A) x", "B) y", "C) z", "D) w"], "answer": "B", "speak_text": "Q text" }
-            """
+            prompt = "Generate 1 grammar question. Return JSON: {'question': 'text', 'options': ['A)','B)'], 'answer': 'B', 'speak_text': 'text'}"
             res_text = generate_safe(api_key, prompt)
             try:
                 json_start = res_text.find('{')
@@ -193,58 +170,41 @@ if api_key and name:
             q = st.session_state.quiz
             st.write(f"**{q['question']}**")
             st.write("\n".join(q['options']))
-            
             with st.form("quiz_answer"):
                 user_ans = st.text_input("Your Answer (A/B/C/D):")
-                if st.session_state.voice_input:
-                     st.info(f"Voice detected: {st.session_state.voice_input}")
+                if st.session_state.voice_input: st.info(f"Voice: {st.session_state.voice_input}")
                 check = st.form_submit_button("Check Answer")
-                
             if check:
-                final_ans = st.session_state.voice_input if st.session_state.voice_input else user_ans
-                match = re.search(r'\b([a-d])\b', str(final_ans).lower())
+                final = st.session_state.voice_input if st.session_state.voice_input else user_ans
+                match = re.search(r'\b([a-d])\b', str(final).lower())
                 if match and match.group(1).upper() == q['answer']:
                     st.balloons()
                     st.success("Correct!")
-                    update_xp(name, 10)
                     st.session_state.quiz = None
                     st.session_state.voice_input = None
                     st.rerun()
-                else:
-                    st.error(f"Wrong.")
+                else: st.error("Wrong.")
 
-    # --- MODE 3: ROLEPLAY ---
+    # --- ROLEPLAY ---
     elif mode == "💬 Roleplay":
         st.header("💬 Conversation")
         if "chat" not in st.session_state: st.session_state.chat = []
-
         for msg in st.session_state.chat:
             st.chat_message(msg["role"]).write(msg["text"])
-
-        # Show voice input if it exists
-        if st.session_state.voice_input:
-            st.info(f"🎤 You said: {st.session_state.voice_input}")
-
-        user_msg = st.chat_input("Type...")
         
-        # Use voice if available, else text
+        if st.session_state.voice_input: st.info(f"🎤 {st.session_state.voice_input}")
+        user_msg = st.chat_input("Type...")
         final_msg = st.session_state.voice_input if st.session_state.voice_input else user_msg
         
         if final_msg:
-            # Clear voice for next time
             st.session_state.voice_input = None
-            
             st.session_state.chat.append({"role": "user", "text": final_msg})
             st.chat_message("user").write(final_msg)
-            
-            prompt = f"Act as an English Tutor. Reply to: '{final_msg}'. Keep it short."
+            prompt = f"Act as English Tutor. Reply to: '{final_msg}'"
             res_text = generate_safe(api_key, prompt)
-            
             st.session_state.chat.append({"role": "assistant", "text": res_text})
             st.chat_message("assistant").write(res_text)
             speak_human(res_text)
-            # Force rerun to show the chat
             st.rerun()
-
 else:
-    st.info("Enter Name and Groq Key in Sidebar")
+    st.info("Login in Sidebar")

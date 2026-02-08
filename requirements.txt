@@ -3,3 +3,4 @@ groq
 edge-tts
 SpeechRecognition
 streamlit-mic-recorder
+pydub
