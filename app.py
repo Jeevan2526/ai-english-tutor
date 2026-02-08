@@ -8,9 +8,10 @@ import re
 import os
 import time
 import json
+from streamlit_mic_recorder import mic_recorder # <--- NEW IMPORT
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="AI Human Tutor (Groq)", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="AI Human Tutor", page_icon="⚡", layout="wide")
 
 # --- DATABASE ---
 def init_db():
@@ -45,7 +46,6 @@ def get_groq_response(prompt, api_key):
                     "content": prompt,
                 }
             ],
-            # --- UPDATED MODEL NAME ---
             model="llama-3.3-70b-versatile", 
             temperature=0.7,
         )
@@ -60,10 +60,8 @@ def generate_safe(api_key, prompt):
 
 # --- VOICE & AVATAR ---
 def show_avatar(is_speaking=False):
-    # Free placeholders (Replace with your own URLs if you want)
     SILENT_URL = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
     TALKING_URL = "https://media.tenor.com/5mY0_O8AzWwAAAAi/talking-speaking.gif"
-    
     place = st.empty()
     if is_speaking:
         place.image(TALKING_URL, width=200)
@@ -75,42 +73,43 @@ async def generate_human_voice(text):
     text = re.sub(r'\[.*?\]', '', text).replace("*", "").replace("#", "").replace("`", "")
     text = text.replace("JSON", "").replace("{", "").replace("}", "")
     if not text.strip(): return
-    
     communicate = edge_tts.Communicate(text, "en-IN-NeerjaNeural")
     await communicate.save("speech_groq.mp3")
 
 def speak_human(text):
     try:
-        # 1. Show Talking Avatar
         avatar_spot = show_avatar(is_speaking=True)
-        
-        # 2. Generate Audio
         asyncio.run(generate_human_voice(text))
-        
-        # 3. Play Audio
         if os.path.exists("speech_groq.mp3"):
             audio_file = open("speech_groq.mp3", "rb")
             audio_bytes = audio_file.read()
             st.audio(audio_bytes, format="audio/mp3", autoplay=True)
-            
-            # Estimate duration to keep avatar moving (approx 2.5 words/sec)
             est_time = len(text.split()) / 2.5
             time.sleep(est_time)
-            
-        # 4. Revert to Silent
         avatar_spot.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=200)
-            
     except Exception as e:
         st.error(f"Audio Error: {e}")
 
-def listen_to_user():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.toast("🎤 Listening...", icon="👂")
-        try:
-            audio = r.listen(source, timeout=5)
-            return r.recognize_google(audio)
-        except: return None
+# --- NEW FUNCTION: BROWSER RECORDER ---
+def process_audio(audio_bytes):
+    """Converts the browser audio to text"""
+    if audio_bytes:
+        # Save the bytes to a temporary file
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_bytes)
+        
+        # Use SpeechRecognition on the FILE, not the microphone
+        r = sr.Recognizer()
+        with sr.AudioFile("temp_audio.wav") as source:
+            audio_data = r.record(source)
+            try:
+                text = r.recognize_google(audio_data)
+                return text
+            except sr.UnknownValueError:
+                return None
+            except sr.RequestError:
+                return None
+    return None
 
 # --- APP START ---
 init_db()
@@ -119,16 +118,26 @@ with st.sidebar:
     st.title("⚡ AI Tutor (Groq)")
     name = st.text_input("Name:")
     
-    # GROQ KEY INPUT
     try: api_key = st.secrets["GROQ_API_KEY"]
     except: api_key = st.text_input("Groq API Key (gsk_...):", type="password")
     
     mode = st.radio("Mode:", ["📚 Grammar", "📝 Quiz", "💬 Roleplay"])
     
     st.markdown("---")
-    if st.button("🎤 Click to Speak"):
-        st.session_state.voice_input = listen_to_user()
+    st.write("🎙️ **Voice Input**")
     
+    # --- NEW RECORDER WIDGET ---
+    # This creates a button: Click to Record -> Click to Stop
+    audio = mic_recorder(
+        start_prompt="🎤 Start Recording",
+        stop_prompt="Dn Stop Recording",
+        key='recorder'
+    )
+    
+    if audio:
+        # If we have audio, process it immediately
+        st.session_state.voice_input = process_audio(audio['bytes'])
+
     if st.button("🔄 Clear Memory"):
         st.cache_data.clear()
 
@@ -136,8 +145,8 @@ if "voice_input" not in st.session_state: st.session_state.voice_input = None
 
 if api_key and name:
 
-    st.title("🚀 AI English Academy (High Speed)")
-    show_avatar(is_speaking=False) # Default Silent Avatar
+    st.title("🚀 AI English Academy")
+    show_avatar(is_speaking=False)
 
     # --- MODE 1: GRAMMAR ---
     if mode == "📚 Grammar":
@@ -153,22 +162,15 @@ if api_key and name:
             {{ "lesson": "Markdown explanation with Hindi examples.", "summary": "Short speech text." }}
             """
             res_text = generate_safe(api_key, prompt)
-            
             try:
-                # Cleaning Llama 3 output to find JSON
                 json_start = res_text.find('{')
                 json_end = res_text.rfind('}') + 1
-                if json_start != -1 and json_end != -1:
-                    json_str = res_text[json_start:json_end]
-                    data = json.loads(json_str)
-                    
+                if json_start != -1:
+                    data = json.loads(res_text[json_start:json_end])
                     st.markdown(data["lesson"])
                     speak_human(data["summary"])
-                else:
-                    st.error("AI did not return JSON. Trying again...")
             except:
-                st.error("AI Output Error. Raw text:")
-                st.write(res_text)
+                st.error("AI Error. Try again.")
 
     # --- MODE 2: QUIZ ---
     elif mode == "📝 Quiz":
@@ -183,11 +185,9 @@ if api_key and name:
             try:
                 json_start = res_text.find('{')
                 json_end = res_text.rfind('}') + 1
-                json_str = res_text[json_start:json_end]
-                st.session_state.quiz = json.loads(json_str)
+                st.session_state.quiz = json.loads(res_text[json_start:json_end])
                 speak_human(st.session_state.quiz["speak_text"])
-            except: 
-                st.error("Try again.")
+            except: pass
 
         if "quiz" in st.session_state:
             q = st.session_state.quiz
@@ -202,7 +202,6 @@ if api_key and name:
                 
             if check:
                 final_ans = st.session_state.voice_input if st.session_state.voice_input else user_ans
-                
                 match = re.search(r'\b([a-d])\b', str(final_ans).lower())
                 if match and match.group(1).upper() == q['answer']:
                     st.balloons()
@@ -212,7 +211,7 @@ if api_key and name:
                     st.session_state.voice_input = None
                     st.rerun()
                 else:
-                    st.error(f"Wrong. Answer was {q['answer']}")
+                    st.error(f"Wrong.")
 
     # --- MODE 3: ROLEPLAY ---
     elif mode == "💬 Roleplay":
@@ -222,22 +221,30 @@ if api_key and name:
         for msg in st.session_state.chat:
             st.chat_message(msg["role"]).write(msg["text"])
 
-        user_msg = st.chat_input("Type...")
+        # Show voice input if it exists
         if st.session_state.voice_input:
-            user_msg = st.session_state.voice_input
-            st.session_state.voice_input = None 
+            st.info(f"🎤 You said: {st.session_state.voice_input}")
 
-        if user_msg:
-            st.session_state.chat.append({"role": "user", "text": user_msg})
-            st.chat_message("user").write(user_msg)
+        user_msg = st.chat_input("Type...")
+        
+        # Use voice if available, else text
+        final_msg = st.session_state.voice_input if st.session_state.voice_input else user_msg
+        
+        if final_msg:
+            # Clear voice for next time
+            st.session_state.voice_input = None
             
-            # Simple chat prompt
-            prompt = f"Act as an English Tutor. Reply to this student: '{user_msg}'. Keep it short."
+            st.session_state.chat.append({"role": "user", "text": final_msg})
+            st.chat_message("user").write(final_msg)
+            
+            prompt = f"Act as an English Tutor. Reply to: '{final_msg}'. Keep it short."
             res_text = generate_safe(api_key, prompt)
             
             st.session_state.chat.append({"role": "assistant", "text": res_text})
             st.chat_message("assistant").write(res_text)
             speak_human(res_text)
+            # Force rerun to show the chat
+            st.rerun()
 
 else:
-    st.info("Enter your Name and Groq API Key in Sidebar")
+    st.info("Enter Name and Groq Key in Sidebar")
