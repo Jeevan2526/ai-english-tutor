@@ -136,23 +136,46 @@ if api_key and name:
     st.title("🚀 AI English Academy")
     show_avatar(is_speaking=False)
 
-    # --- GRAMMAR ---
+    # --- MODE 1: GRAMMAR (DEBUG VERSION) ---
     if mode == "📚 Grammar":
         st.header("📚 Grammar Class")
+        
         with st.form("grammar_form"):
-            topic = st.text_input("Topic:", "Present Tense")
+            topic = st.text_input("Enter Topic:", "Present Tense")
             submitted = st.form_submit_button("Teach Me 👩‍🏫")
+        
         if submitted:
-            prompt = f"Teach '{topic}'. Return JSON: {{'lesson': 'markdown', 'summary': 'speech'}}"
+            prompt = f"""
+            Teach '{topic}'. Return ONLY valid JSON with no extra text:
+            {{ "lesson": "Markdown explanation with Hindi examples.", "summary": "Short speech text." }}
+            """
             res_text = generate_safe(api_key, prompt)
-            try:
-                json_start = res_text.find('{')
-                json_end = res_text.rfind('}') + 1
-                data = json.loads(res_text[json_start:json_end])
-                st.markdown(data["lesson"])
-                speak_human(data["summary"])
-            except: st.error("AI Error")
-
+            
+            # --- NEW DEBUGGING LOGIC ---
+            if "ERROR" in res_text:
+                st.error("🚨 API Connection Failed!")
+                st.write(f"**Reason:** {res_text}")  # Shows the real API error
+            else:
+                try:
+                    # Try to find JSON
+                    json_start = res_text.find('{')
+                    json_end = res_text.rfind('}') + 1
+                    
+                    if json_start != -1 and json_end != -1:
+                        clean_json = res_text[json_start:json_end]
+                        data = json.loads(clean_json)
+                        
+                        st.markdown(data["lesson"])
+                        speak_human(data["summary"])
+                    else:
+                        st.error("🚨 AI Format Error")
+                        st.write("The AI replied with text, not JSON. Here is what it said:")
+                        st.warning(res_text) # Print the raw text to see what happened
+                        
+                except Exception as e:
+                    st.error(f"🚨 Python Logic Error: {e}")
+                    st.write("Raw AI Response was:")
+                    st.code(res_text)
     # --- QUIZ ---
     elif mode == "📝 Quiz":
         st.header("📝 Voice Quiz")
