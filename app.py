@@ -16,70 +16,113 @@ import io
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Easy English AI", page_icon="🧸", layout="wide")
 
-# --- 1. SIMPLE ROADMAP (Clear & Easy) ---
+# --- 1. CURRICULUM (Updated) ---
 CURRICULUM = {
-    "Level 1: The Basics (Baby Steps)": [
-        "1. Hello & Introduction (Start Here)",
-        "2. Action Words (Eat, Sleep, Go)",
-        "3. Describing Things (Colors, Big/Small)",
-        "4. Daily Routine (I wake up...)",
+    "Phase 1: Foundation (A1/A2)": [
+        "1. Basic Greetings & Numbers",
+        "2. Articles (A, An, The) & Nouns",
+        "3. To Be (Am, Is, Are)",
+        "4. Adjectives (Describing Things)",
+        "5. Prepositions (In, On, At, For)",
+        "6. Present Simple (Habits)",
+        "7. Present Continuous (Now)",
+        "8. Past Simple (Finished Actions)"
     ],
-    "Level 2: Connecting Ideas (Sentences)": [
-        "5. Yesterday (Past Tense)",
-        "6. Tomorrow (Future Plans)",
-        "7. Asking Questions (Who, What, Where)",
-        "8. Can & Cannot (Ability)",
+    "Phase 2: Connections (B1/B2)": [
+        "9. Adverbs (Slowly, Quickly, Always)",
+        "10. Conjunctions (And, But, Because)",
+        "11. Present Perfect (Experiences)",
+        "12. Future Forms (Will vs Going to)",
+        "13. Modals (Can, Should, Must)",
+        "14. Conditionals 0, 1 & 2",
+        "15. Passive Voice"
     ],
-    "Level 3: Fluent Speaking (Conversation)": [
-        "9. Talking about Feelings",
-        "10. Shopping & Bargaining",
-        "11. Travel & Directions",
-        "12. Office & Job Interview",
+    "Phase 3: The Polish (C1/C2)": [
+        "16. Advanced Phrasal Verbs",
+        "17. Conditionals 3 & Mixed",
+        "18. Reported Speech",
+        "19. Inversion for Emphasis",
+        "20. Business & Academic Writing"
     ]
 }
 
-# --- 2. VERB DATABASE (Pre-loaded with 50 Common Verbs) ---
+# --- 2. VERB DATABASE (With All 5 Forms) ---
+# V1 (Base), V2 (Past), V3 (Perfect), V4 (Ing), V5 (s/es)
 INITIAL_VERBS = [
-    ("be", "was/were", "been"), ("have", "had", "had"), ("do", "did", "done"),
-    ("say", "said", "said"), ("go", "went", "gone"), ("get", "got", "gotten"),
-    ("make", "made", "made"), ("know", "knew", "known"), ("think", "thought", "thought"),
-    ("take", "took", "taken"), ("see", "saw", "seen"), ("come", "came", "come"),
-    ("want", "wanted", "wanted"), ("look", "looked", "looked"), ("use", "used", "used"),
-    ("find", "found", "found"), ("give", "gave", "given"), ("tell", "told", "told"),
-    ("work", "worked", "worked"), ("call", "called", "called"), ("try", "tried", "tried"),
-    ("ask", "asked", "asked"), ("need", "needed", "needed"), ("feel", "felt", "felt"),
-    ("become", "became", "become"), ("leave", "left", "left"), ("put", "put", "put"),
-    ("mean", "meant", "meant"), ("keep", "kept", "kept"), ("let", "let", "let"),
-    ("begin", "began", "begun"), ("seem", "seemed", "seemed"), ("help", "helped", "helped"),
-    ("talk", "talked", "talked"), ("turn", "turned", "turned"), ("start", "started", "started"),
-    ("show", "showed", "shown"), ("hear", "heard", "heard"), ("play", "played", "played"),
-    ("run", "ran", "run"), ("move", "moved", "moved"), ("like", "liked", "liked"),
-    ("live", "lived", "lived"), ("believe", "believed", "believed"), ("hold", "held", "held"),
-    ("bring", "brought", "brought"), ("happen", "happened", "happened"), ("write", "wrote", "written"),
-    ("provide", "provided", "provided"), ("sit", "sat", "sat")
+    ("be", "was/were", "been", "being", "is"),
+    ("have", "had", "had", "having", "has"),
+    ("do", "did", "done", "doing", "does"),
+    ("say", "said", "said", "saying", "says"),
+    ("go", "went", "gone", "going", "goes"),
+    ("get", "got", "gotten", "getting", "gets"),
+    ("make", "made", "made", "making", "makes"),
+    ("know", "knew", "known", "knowing", "knows"),
+    ("think", "thought", "thought", "thinking", "thinks"),
+    ("take", "took", "taken", "taking", "takes"),
+    ("see", "saw", "seen", "seeing", "sees"),
+    ("come", "came", "come", "coming", "comes"),
+    ("want", "wanted", "wanted", "wanting", "wants"),
+    ("look", "looked", "looked", "looking", "looks"),
+    ("use", "used", "used", "using", "uses"),
+    ("find", "found", "found", "finding", "finds"),
+    ("give", "gave", "given", "giving", "gives"),
+    ("tell", "told", "told", "telling", "tells"),
+    ("work", "worked", "worked", "working", "works"),
+    ("call", "called", "called", "calling", "calls"),
+    ("try", "tried", "tried", "trying", "tries"),
+    ("ask", "asked", "asked", "asking", "asks"),
+    ("need", "needed", "needed", "needing", "needs"),
+    ("feel", "felt", "felt", "feeling", "feels"),
+    ("become", "became", "become", "becoming", "becomes"),
+    ("leave", "left", "left", "leaving", "leaves"),
+    ("put", "put", "put", "putting", "puts"),
+    ("mean", "meant", "meant", "meaning", "means"),
+    ("keep", "kept", "kept", "keeping", "keeps"),
+    ("let", "let", "let", "letting", "lets"),
+    ("begin", "began", "begun", "beginning", "begins"),
+    ("seem", "seemed", "seemed", "seeming", "seems"),
+    ("help", "helped", "helped", "helping", "helps"),
+    ("talk", "talked", "talked", "talking", "talks"),
+    ("turn", "turned", "turned", "turning", "turns"),
+    ("start", "started", "started", "starting", "starts"),
+    ("show", "showed", "shown", "showing", "shows"),
+    ("hear", "heard", "heard", "hearing", "hears"),
+    ("play", "played", "played", "playing", "plays"),
+    ("run", "ran", "run", "running", "runs"),
+    ("move", "moved", "moved", "moving", "moves"),
+    ("like", "liked", "liked", "liking", "likes"),
+    ("live", "lived", "lived", "living", "lives"),
+    ("believe", "believed", "believed", "believing", "believes"),
+    ("hold", "held", "held", "holding", "holds"),
+    ("bring", "brought", "brought", "bringing", "brings"),
+    ("happen", "happened", "happened", "happening", "happens"),
+    ("write", "wrote", "written", "writing", "writes"),
+    ("provide", "provided", "provided", "providing", "provides"),
+    ("sit", "sat", "sat", "sitting", "sits")
 ]
 
 def init_db():
-    conn = sqlite3.connect("english_easy.db")
+    conn = sqlite3.connect("english_easy_v2.db")
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS verbs (v1 TEXT UNIQUE, v2 TEXT, v3 TEXT)")
+    # Create table with 5 columns for verbs
+    c.execute("CREATE TABLE IF NOT EXISTS verbs (v1 TEXT UNIQUE, v2 TEXT, v3 TEXT, v4 TEXT, v5 TEXT)")
     
     # Load verbs if empty
     c.execute("SELECT count(*) FROM verbs")
     if c.fetchone()[0] == 0:
-        c.executemany("INSERT OR IGNORE INTO verbs VALUES (?, ?, ?)", INITIAL_VERBS)
+        c.executemany("INSERT OR IGNORE INTO verbs VALUES (?, ?, ?, ?, ?)", INITIAL_VERBS)
         conn.commit()
     conn.close()
 
 def get_verbs():
-    conn = sqlite3.connect("english_easy.db")
+    conn = sqlite3.connect("english_easy_v2.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM verbs")
+    c.execute("SELECT * FROM verbs ORDER BY v1 ASC") # Sorted Alphabetically
     data = c.fetchall()
     conn.close()
     return data
 
-# --- AI ENGINE (UPDATED TO BE SIMPLE) ---
+# --- AI ENGINE ---
 @st.cache_data(show_spinner=False)
 def get_groq_response(prompt, api_key):
     try:
@@ -88,8 +131,7 @@ def get_groq_response(prompt, api_key):
             messages=[
                 {
                     "role": "system", 
-                    # --- THIS IS THE MAGIC CHANGE ---
-                    "content": "You are a friendly, patient English Tutor for beginners. Explain everything in VERY SIMPLE words. Use real-life analogies (like cooking, driving, sports). Do not use complex grammar terms. Explain like I am 10 years old. Always support explanations with Hindi/Hinglish examples if helpful."
+                    "content": "You are a friendly, patient English Tutor for beginners. Explain everything in VERY SIMPLE words. Use real-life analogies. Do not use complex grammar terms. Explain like I am 10 years old. Support explanations with Hindi examples if asked."
                 },
                 {"role": "user", "content": prompt}
             ],
@@ -101,7 +143,7 @@ def get_groq_response(prompt, api_key):
         return f"ERROR: {e}"
 
 def generate_safe(api_key, prompt):
-    with st.spinner("🧸 Simplifying the topic..."):
+    with st.spinner("🧸 Thinking..."):
         text = get_groq_response(prompt, api_key)
     return text
 
@@ -161,7 +203,7 @@ with st.sidebar:
     except: api_key = st.text_input("Groq Key:", type="password")
     
     # NAVIGATION
-    mode = st.radio("Choose Activity:", ["🗺️ Learn Simply", "🏋️ Verb Practice", "💬 Talk to AI"])
+    mode = st.radio("Choose Activity:", ["🗺️ Learn Simply", "📜 All Verbs List", "🏋️ Verb Practice", "💬 Talk to AI"])
     
     st.divider()
     st.write("🎙️ **Microphone**")
@@ -216,19 +258,33 @@ if api_key and name:
                     st.rerun()
                 else: st.error("Oops! Try again.")
 
-    # --- MODE 2: VERB PRACTICE ---
+    # --- MODE 2: ALL VERBS LIST (NEW) ---
+    elif mode == "📜 All Verbs List":
+        st.header("📜 Complete Verb List (5 Forms)")
+        st.write("Here are the 5 forms of common verbs:")
+        st.caption("V1: Base | V2: Past | V3: Perfect | V4: Continuous (-ing) | V5: Simple Present (-s/es)")
+        
+        # Get all verbs from DB
+        verbs = get_verbs()
+        
+        # Create a nice table
+        import pandas as pd
+        df = pd.DataFrame(verbs, columns=["V1 (Base)", "V2 (Past)", "V3 (Perfect)", "V4 (Ing)", "V5 (s/es)"])
+        st.dataframe(df, use_container_width=True, height=600)
+
+    # --- MODE 3: VERB PRACTICE ---
     elif mode == "🏋️ Verb Practice":
         st.header("🏋️ Verbs (Action Words)")
         
-        st.subheader("📖 Dictionary")
-        search = st.text_input("Type a verb (like 'go' or 'eat'):")
+        st.subheader("📖 Dictionary Search")
+        search = st.text_input("Type a verb (like 'go'):")
         all_verbs = get_verbs()
         
         if search:
             found = [v for v in all_verbs if search.lower() in v[0]]
             if found:
                 for v in found:
-                    st.success(f"**{v[0].upper()}** (Present) -> **{v[1]}** (Past) -> **{v[2]}** (Perfect)")
+                    st.success(f"**{v[0].upper()}** -> Past: {v[1]} | Perfect: {v[2]} | Ing: {v[3]}")
             else:
                 st.warning("I don't know that verb yet.")
 
@@ -238,7 +294,7 @@ if api_key and name:
             st.session_state.drill_verb = random.choice(all_verbs)
         
         target = st.session_state.drill_verb
-        st.write(f"### What is the **Past Tense** of: `{target[0].upper()}`?")
+        st.write(f"### What is the **Past Tense** (V2) of: `{target[0].upper()}`?")
         
         user_v2 = st.text_input("Type Answer:", key="v2_input")
         
@@ -252,7 +308,7 @@ if api_key and name:
                 st.error(f"Not quite. It is **{target[1]}**.")
                 speak_human(f"The past tense of {target[0]} is {target[1]}")
 
-    # --- MODE 3: SIMPLE CHAT ---
+    # --- MODE 4: SIMPLE CHAT ---
     elif mode == "💬 Talk to AI":
         st.header("💬 Easy Conversation")
         if "chat" not in st.session_state: st.session_state.chat = []
