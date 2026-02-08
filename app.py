@@ -37,19 +37,61 @@ def init_db():
     conn.commit()
     conn.close()
 
+# --- 2. VERB DATABASE (5 Forms) ---
+INITIAL_VERBS = [
+    ("be", "was/were", "been", "being", "is"),
+    ("have", "had", "had", "having", "has"),
+    ("do", "did", "done", "doing", "does"),
+    ("say", "said", "said", "saying", "says"),
+    ("go", "went", "gone", "going", "goes"),
+    ("get", "got", "gotten", "getting", "gets"),
+    ("make", "made", "made", "making", "makes"),
+    ("know", "knew", "known", "knowing", "knows"),
+    ("think", "thought", "thought", "thinking", "thinks"),
+    ("take", "took", "taken", "taking", "takes"),
+    ("see", "saw", "seen", "seeing", "sees"),
+    ("come", "came", "come", "coming", "comes"),
+    ("want", "wanted", "wanted", "wanting", "wants"),
+    ("look", "looked", "looked", "looking", "looks"),
+    ("use", "used", "used", "using", "uses"),
+    ("find", "found", "found", "finding", "finds"),
+    ("give", "gave", "given", "giving", "gives"),
+    ("tell", "told", "told", "telling", "tells"),
+    ("work", "worked", "worked", "working", "works"),
+    ("call", "called", "called", "calling", "calls"),
+    ("try", "tried", "tried", "trying", "tries"),
+    ("ask", "asked", "asked", "asking", "asks"),
+    ("need", "needed", "needed", "needing", "needs"),
+    ("feel", "felt", "felt", "feeling", "feels"),
+    ("become", "became", "become", "becoming", "becomes"),
+    ("leave", "left", "left", "leaving", "leaves"),
+    ("put", "put", "put", "putting", "puts"),
+    ("mean", "meant", "meant", "meaning", "means"),
+    ("keep", "kept", "kept", "keeping", "keeps"),
+    ("let", "let", "let", "letting", "lets"),
+    ("begin", "began", "begun", "beginning", "begins"),
+    ("seem", "seemed", "seemed", "seeming", "seems"),
+    ("help", "helped", "helped", "helping", "helps"),
+    ("talk", "talked", "talked", "talking", "talks"),
+    ("turn", "turned", "turned", "turning", "turns"),
+    ("start", "started", "started", "starting", "starts"),
+    ("show", "showed", "shown", "showing", "shows"),
+    ("hear", "heard", "heard", "hearing", "hears"),
+    ("play", "played", "played", "playing", "plays"),
+    ("run", "ran", "run", "running", "runs"),
+    ("move", "moved", "moved", "moving", "moves"),
+    ("like", "liked", "liked", "liking", "likes"),
+    ("live", "lived", "lived", "living", "lives"),
+    ("believe", "believed", "believed", "believing", "believes"),
+    ("hold", "held", "held", "holding", "holds"),
+    ("bring", "brought", "brought", "bringing", "brings"),
+    ("happen", "happened", "happened", "happening", "happens"),
+    ("write", "wrote", "written", "writing", "writes"),
+    ("provide", "provided", "provided", "providing", "provides"),
+    ("sit", "sat", "sat", "sitting", "sits")
+     ]
+
 def load_verbs(c):
-    INITIAL_VERBS = [
-        ("be", "was/were", "been", "being", "is"),
-        ("have", "had", "had", "having", "has"),
-        ("do", "did", "done", "doing", "does"),
-        ("say", "said", "said", "saying", "says"),
-        ("go", "went", "gone", "going", "goes"),
-        ("get", "got", "gotten", "getting", "gets"),
-        ("make", "made", "made", "making", "makes"),
-        ("know", "knew", "known", "knowing", "knows"),
-        ("think", "thought", "thought", "thinking", "thinks"),
-        ("take", "took", "taken", "taking", "takes")
-    ]
     c.executemany("INSERT OR IGNORE INTO verbs VALUES (?, ?, ?, ?, ?)", INITIAL_VERBS)
 
 def signup_user(username, password):
